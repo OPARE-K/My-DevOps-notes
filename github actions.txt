@@ -2,7 +2,7 @@
 
 after forking
 
-2. create a folder and go inti folder in your local machine eg mkdir micro-service cd micro-services
+2. create a folder and go into folder in your local machine eg mkdir micro-service cd micro-services
 
 3. clone remote repo to your local repo
 
