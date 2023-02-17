@@ -10,9 +10,7 @@ after forking
 
 
 
-this process a github repo into your personal githu repo
-
-also stores the files locally
+this copies contents of a github repo and stores the files locally
 
 
 
