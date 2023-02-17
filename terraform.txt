@@ -5,8 +5,8 @@ IAC- Infrastructure as code(IAC) is the process of managing and provisioning com
 
 TERRAFORM - Terraform is a tool for building,changing and versioning infrastructure safely and efficiently.  
 
-access key-AKIAZQOAXTZX6JLQPAO6
-secret access key-lcNSFKgwCpQ+8xNyjOPTvZa3Y4tdQwJ5BKijEb2N
+access key: xxxxxxxxxx
+secret access key: xxxxxxxxxx
 
 
 1.create a folder to store your terrafrom files
