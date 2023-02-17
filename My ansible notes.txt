@@ -1,0 +1,613 @@
+ Ansible is simple open source IT engine which automates application deployment, intra service orchestration, cloud provisioning and many other IT tools.
+
+CONFIGURATION-dynamic data giving to a computer/machine to carry out a task.
+
+
+WHY AUTOMATE CONFIG MANAGEMENT?
+ -Using manual configs means of providing configs is not ideal because its prone to errors when dealing with a lot of machines
+-whereas automatic configs makes deployment faster and less prone to errors
+
+NB configs deals with runtime softwares not codes(configs to be run at the time of runnig the software}
+eg if you want a webserver, you must install apache2, start the service &locate the html file.
+
+-best practice is to manage all configurations from a central point 
+
+
+
+HOW ANSIBLE WORKS
+-All configurations are made on an ansible server from where it connects wth the remote servers and applies the configurations via SSH.
+-YAML files called (playbooks) will be used to write the configs in the ansible server
+
+
+ANSIBLE ARCHITECTURE
+ PLAYBOOK- Playbook provides a list of settings & tasks to apply to the remote machines.*can be a single machine or a group of machines  
+         -{eg all 3 of frontend servers will belong to one playbook}*with same configurations
+         -{backend1 servers will belong to one playbook}
+         -{backend2 servers will belong to one playbook}
+
+A playbook may contain more than 1 tasks put together eg...(each task is handled by a MODULE)
+                                                         TASK 1 -INSTALL Apache 2                                   [Handled by ansible APT package module]
+                                                         TASK 2 -START Apache webserver                             [Handled by ansible module to start service]
+                                                         TASK 3 -locate html file & copy to remote server /var/www/html/index.html           [handled by ansible module to copy file]                               [
+==> implies when ansible  applies the playbook playbook config, it carries out the tasks attached to it
+
+ *ANSIBLE CONVERTS THE CURRENT STATES OF MACHINES INTO THE DESIRED STATE
+
+ SETTING UP ANSIBLE
+1.create your UBUNTU EC2 MACHINE
+*apt-get update
+ 
+2. google 'installing ansible on ubuntu'
+   *sudo apt update 
+   *sudo apt install software-properties-common
+   *sudo add-apt-repository --yes --update ppa:ansible/ansible
+   *sudo apt install ansible
+
+3. After Ansible in installed move into this folder
+   * cd /etc/ansible
+   *ls
+   ansible.cfg  hosts  roles
+
+4. exit root status and create a new user
+*  useradd -m -s /bin/bash ansible              (creates a user called ansible)
+*  sudo su - ansible                            (switches to ansible user)
+
+5.Create hidden folder to store your ansible configurations 
+ *mkdir .ansible
+ *cd .ansible              (go into hidden folder)
+ 
+6. copy ansible.cfg file into current folder
+*cp /etc/ansible/ansible.cfg .
+
+7.Edit the ansible.cfg file that you copied
+  *nano ansible.cfg   
+  -specify your indentory file      = /home/ansible/.ansible/hosts   (path of your hidden folder created & the file you copied)
+  remove hashtag infront of inventory
+  -disable host key checking by deleting the hashtag infront of 'host_key_checking+false
+
+8. CREATE HOSTS FILE IN HIDDEN REPO I.E (.ansible directory)
+*touch hosts 
+-This file will contain all the information about the machines which ansible is going to manage.     {ip addresses}
+
+9. NOW CREATE A KEY PAIR TO ENABLE SSH CONNECTION TO REMOTE SERVERS TO BE MANAGED.
+* ssh-keygen                       (creates pri & pub key}
+-Created keys(both pri & pub keys)  will be stored in  /home/ansible/.ssh)
+-copy 'public key' to remote servers and save in /home/ubuntu/.ssh/authorized keys       (by default, server looks for the pub key in this location)
+-import key to aws console to make it easier when connecting to a a lot of machines.
+- connect to remote server    (remember to issue ssh command from where you stored your private key i.e "id_rsa"
+
+10. ADDING THE REMOTE MACHINES TO BE MANAGED BY ANSIBLE TO THE INVENTORY
+-Configuring settings on the ansible machine on tasks you want to be performed on the remote machines
+-eg the list of softwares uwant installed on the remote machine, services to be run,which file to present in which folder etc...
+
+NB: If all instances belong to the same VPC, they can communicate using PRIVATE ips
+==> therefore u can input the private ips of the remote servers in the "hosts" file on the ansible server.
+
+11. lOCATE "HOSTS" FILE . (The one you created earlier located in the (.ansible) folder
+-edit nano file by inputing PRIVATE IP addresses of remote machiness. i.e (webserver&dbserver) in our case
+-Values can be inputed singularly or in groups.
+when using groups,
+
+[webservers]
+172.31.85.16
+172.31.85.22
+
+[dbserver]
+172.30.88.94
+172.30.88.99
+
+12. RUN ANSIBLE Ad-Hoc command
+*ansible 172.31.85.16 --user ubuntu --become-user root --become-method sudo -b -m apt -a "state=latest update_cache=yes name=apache2"
+ 
+*AD-HOC command is used when you have a one time job u want to do on the remote machine. (no need for playbooks in such cases)
+
+-172.31..85.16  {private ip address of remote machine uwant ansible to connect to. can be a single ip or a group name e.g "webservers" group
+--user ubuntu --become-user root --become-method- sudo -b    {login into the machine as user ubuntu & the possibility of becoming a root user if "-b" is applied
+
+NB IF -b is ignored in the command, then ansible will log into the remote account as an ubuntu user and not a root user
+
+-m apt -a   {apt signifies whih module uwant to install for the machine eg Apache2}  
+            -"state=latest" - means latest version of apache must be installed
+            -update_cache=yes -means run "apt-get update" before installing apache
+            -name=apache2 -means install apache2 package
+ takes a while to get them installed so dont be worried when an error pops up
+
+BOOM! apache is installed,cache updated and is running on remote servers.
+
+
+13. CREATING YOUR PLAYBOOKS
+  PLAYBOOKS- A file containing all the information of how a remote machine should look like.
+  Ideal way of managing the remotes servers using ansible is by using playbooks.
+
+-create a folder in the .ansible directory   (eg mkdir playbook)
+-create a file in the playbook folder   (eg nano webservers.yaml) 
+  
+# eg playbook
+         webservers.yaml
+- hosts: webservers
+  remote_user: ubuntu
+  become_user: root
+  become_method: sudo
+  become: yes
+
+  tasks:
+    - name: make sure that Apache is installed on the remote webservers
+      apt:                                         (google ansible apt package module)
+        name: apache2
+        state: latest
+        update_cache: yes
+    - name: make sure Apache Service is started & enabled at reboot
+      service:                                     (google ansible module to start a service)
+        name: apache2
+        state: started
+        enabled: yes
+    - name: make sure that the index.html file is present in the /var/www/html
+      copy:                                        (google ansible module to copy a file)
+        src: /home/ansible/.ansible/files/index.html                  (file source-create a folder called 'files' with index.html file in the location u have your "ansible.cfg" file{i.e .ansible}
+        dest: /var/www/html/index.html                           (the file will be copied to this locaton in the remote servers)
+
+ENTER THIS COMMAND TO START THE PROCESS
+*ansible-playbook playbooks/webservers.yaml
+
+
+ 
+ANSIBLE VARIABLES
+-How to use variables when writing your playbooks instead of hardcoding values.
+
+- hosts: webservers
+  remote_user: ubuntu
+  become_user: root
+  become_method: sudo
+  become: yes
+
+  vars:                                               (these are the variables to be used)
+    package_name: apache2
+    service_name: apache2
+    index_file: index.php
+    document_root: /var/www/html
+
+  tasks:
+    - name: make sure that Apache is installed on the remote webservers
+      apt:                                   
+        name: "{{ package_name }}"                 Ref variables from vars. input keys in "{{ ... }}"
+        state: latest
+        update_cache: yes
+
+
+    - name: make sure that Apache is installed on the remote webservers
+      apt:                                   
+        name: libapache2-mod-php                     {input module to enable apache run php programs .ie libapache2-mod-php}  
+        state: latest
+        update_cache: yes
+    - name: make sure Apache Service is started & enabled at reboot
+      service:               
+        name: "{{ service_name }}"
+        state: started
+        enabled: yes
+    - name: make sure that the index.html file is present in the /var/www/html
+      copy:     
+        src: "/home/ansible/.ansible/files/{{ index_file }}"          
+        dest: "{{ document_root }}/{{ index_file }}"               = /var/www/html/index.html REMEMBER!                    
+
+
+# Variables  makes it easier & faster  to make adjustments to values and everything looks nice!
+
+for eg if u want your index_file to be php instead of apache2..
+-you just substitute apache for php in the variables
+-and change the index.html source to index.php            {src: /home/ansible/.ansible/files/index.php}      
+
+NB To run a php program u need to install an apache module *on top of apache* if not apache will run the php program as a normal apache text file.
+    -libapache2-mod-php           {google apache php module ubuntu package}
+
+##sample php program
+<?php
+phpinfo();
+?>
+
+
+
+YAML SYNTAX
+-Used to make tweaks and adjustments in deployed environments(eg how playbooks are expressed)
+
+
+HANDLERS
+-Used when configurations have been changed or certain actions have been done & and so services must be retarted.
+eg Apache configurations got changed and so apache must be restarted. (without restarting apache, apache woudnt know the changes that were made & so the current state of apache woudnt be the desired state expected})
+
+-Handlers enable ansible to be called whenever there's a change in the machine
+#whenever changes are made in apache, handlers are called upon to restart the service(i.e apache)
+
+
+NB Inside apache, there's a file where you can add extra websites on apache which is  /etc/apache2/sites-enabled/some.conf 
+==> "some.conf" here means ucan create anything that ends with ".conf"   eg website.conf
+so inside that file i.e "some.conf" in this case u can write this configurations to add 2 more websites 
+
+So in this case i want to add 2 extra websites ==> papi.com   & joe.com
+eg 1 to point to papi.com = /var/www/papi.com              {alt 1}
+                 joe.com = /var/www/joe.com                {alt 2}
+ 
+#After this is done, Apache must be restarted that's where HANDLERS come into play
+
+
+NB THESE CHANGES WILL BE DONE ON THE REMOTE WEBSERVERS BY THE ANSIBLE SERVER NOT DIRECTLY USING TASKS
+
+#Steps in making the website configurations on the ansible server
+i. Write the apache configuration in the ansible server
+ii.copy the configurations to the remote server
+
+1.go into the ".ansible" folder where you have your project files and folders
+2. go to /files/       {where u have your index.html & index.php files
+3.create "website.conf" file    {nano website.conf}
+
+   syntax for writing configurations in apache for 2 websites
+<VirtualHost *:80>
+ServerName papi.com                              refer alt 1
+DocumentRoot /var/www/papi.com                  {if anyone browses for papi.com give him this folder}
+</VirtualHost>
+
+<VirtualHost *:80>
+ServerName joe.com                              refer alt 2
+DocumentRoot /var/www/joe.com                  {if anyone browses for joe.com give him this folder}
+</VirtualHost>
+
+NB: This file was created on the ansible server so you now have to copy the file to the remote webservers.
+
+==> To do that...
+-go into the playbooks folder in /home/ansible/.ansible/playbooks/
+-inside the playbooks folder edit the webservers.yaml file   {nano webservers.yaml}
+-add one more TASK to the TASKS
+  
+...
+
+  - name: copy Apache Configurations of the websites and restart apache if needed
+      copy:     
+        src: /home/ansible/.ansible/files/website.conf             {"website that conf" is the conf file created earlier on the ansible server}    
+        dest: /etc/apache2/sites-enabled/website.conf                                 
+   notify: Restart Apache                                          {This is the handler. It will get called only if the ansible server made a change on the remote machine.}
+                                                                     
+ handlers:
+   - name: Restart Apache
+     service:
+       name: "{{ service_name }}"
+       state: restarted
+
+{{adding handlers configs to your webservers yaml to make it a single yaml file}}
+
+
+   
+
+- hosts: webservers
+  remote_user: ubuntu
+  become_user: root
+  become_method: sudo
+  become: yes
+
+  vars:
+    package_name: apache2
+    service_name: apache2
+    index_file: index.php
+    document_root: /var/www/html
+
+  tasks:
+    - name: make sure that Apache is installed on the remote webservers
+      apt:
+        name: "{{ package_name }}"
+        state: latest
+        update_cache: yes
+    - name: make sure that Apache is installed on the remote webservers
+      apt:
+        name: libapache2-mod-php
+        state: latest
+        update_cache: yes
+    - name: make sure Apache Service is started & enabled at reboot
+      service:
+        name: "{{ service_name }}"
+        state: started
+        enabled: yes
+    - name: make sure index.php file is present in /var/www/html
+      copy:
+        src: "/home/ansible/.ansible/files/{{ index_file }}"
+        dest: "{{ document_root }}/{{ index_file }}"
+
+    - name: copy Apache Configurations of the websites and restart apache if needed
+      copy:     
+        src: /home/ansible/.ansible/files/website.conf             {"website that conf" is the conf file created earlier on the ansible server}    
+        dest: /etc/apache2/sites-enabled/website.conf                                 
+        notify: Restart Apache                                          {This is the handler. It will get called only if the ansible server made a change on the remote machine.}
+                                                                     
+  handlers:
+    - name: Restart Apache
+      service:
+        name: "{{ service_name }}"
+        state: restarted
+
+{{adding handlers configs to your webservers yaml to make it a single yaml file}}
+
+NB  whatever tasks or modules you've written under the handlers block will not run unless they are called upon
+    And they're called upon only when ansible makes a change to the remote machines.
+
+NEVER RESTART APACHE AS A TASK ELSE ANSIBLE WILL RESTART APACHE EVERYTIME YOU RUN THE PLAYBOOK
+HANDLERS SHOULD BE USED INSTEAD
+
+
+#DYNAMIC CONFIGURATIONS 
+Applying APACHE configurations using JINJA TEMPLATES
+
+--Instead of hardcoding values in the "website.conf" file, you can use variables instead
+                                                                                                                                                 /etc/apache2/sites-enabled/website.conf
+-so the website.conf file will look like this...
+<VirtualHost *:80>
+ServerName {{ website1 }}                              instead of papi.com
+DocumentRoot {{ website1_root }}                 instead of /var/www/papi.com
+</VirtualHost>
+
+<VirtualHost *:80>
+ServerName {{ website2 }}                              instead of joe.com
+DocumentRoot {{ website2_root }}                  instead of /var/www/joe.com
+</VirtualHost>
+
+==>After, define your variables in your playbook file (i.e in your webservers.yaml file)
+NB only variables in playbooks use "{{}}"
+-variables APACHE configurations use {{}}  eg in the "website.conf" file
+
+NEXT
+-Go to your playbooks, locate deployment file i.e "webservers.yaml" file
+- under the field you've inputed your variables, i.e vars, add your variables
+    vars: 
+      website1: papi.com                                 website1 points to papi.com
+      website2: joe.com                                  website2 points to joe.com
+      website1_root: /var/www/papi.com                   website1_root points to /var/www/papi.com
+      website2_root: /var/www/joe.com                    website2_root points to /var/www/joe.com
+
+==> so under where you have your "copy" task, replace "copy" module with "template" module because its not an ordinary file your'copying, it's now a "JINJA TEMPLATE"
+template:
+  src: "/home/ansible/.ansible/files/{{ index_file }}"
+  dest: "{{ document_root }}/{{ index_file }}"
+
+NB Remember not to use the "copy" module use the "template model" and save the configurations before running it.
+ 
+
+Using jinja templates is not the most ideal way of making changes in your configurations eg "when you have to add another  website. It involves too many configurations. 
+{i. creating variables 
+ii. defining variables in the your playbooks
+iii. using template module 
+
+Ideal way is to use JINJA "LOOPS"
+-Google jinja2 loops
+#TO START LOOP   =    {% for my_item in my_collection %}
+#TO END LOOP     =    {% endfor %}
+
+-Edit APACHE file i.e "website.conf file"
+ 
+{% for website in website_list %}                     my_item = "website" i.e server name . In my_collection= "website_list" i.e variables you'll define in the ansible playbook                 
+<VirtualHost *:80>
+ServerName {{ website }}
+DocumentRoot /var/www/{{ website }}
+</VirtualHost>
+{% endfor %}
+
+-Go to ansible playbooks where you have your "webservers.yaml" file and create your variables i.e "website_list" in this case
+Under vars, define these variables
+
+vars:
+  website_list:
+    - papi.com
+    - joe.com
+    - example.com                        creating a new website "example.com" using the jinja template with the loop config
+ 
+NB ALWAYS REMEMBER TO USE THE "TEMPLATE MODULE" & NOT THE "COPY"  MODULE
+
+
+
+ANSIBLE ROLES                          (ROLES=FOLDERS)
+ANSIBLE ROLES STRUCTURE
+                                 .ANSIBLE
+                                    |
+                                  ROLES
+                                    |
+       APACHE -----------------------------------------------------PHP
+         |
+----------------------------------------------------
+|       |        |       |        |        |       |     
+tasks  vars  defaults  handlers   meta     files    templates
+
+-Folders that contain the "main.yaml" files are task.vars,defaults,handlers and meta
+-these main.yaml files can be automatically deployed by ansible
+-folders which dont have the main.yaml files need to be explicitly mentioned before they're deployed
+
+1.go into .ansible folder
+2. create roles folder
+3. inside the "roles" folder, create "apache" folder
+4. within the apache folder, create the roles for your environment. i.e task, vars, defualts, handlers,meta,files & templates
+
+
+STEPS
+1. starting with  "vars" folder
+-inside the vars folder, create a main.yaml file
+
+ package_name: apache2
+ service_name: apache2
+
+2. "default" folder
+-inside the default folder, create a main.yaml file
+    index_file: index.php
+    document_root: /var/www/html
+    website_list:
+      - papi.com
+      - joe.com
+      - test.com
+
+3. "task" folder 
+inside the task folder, create your main.yaml file
+
+    - name: make sure that Apache is installed on the remote webservers
+      apt:
+        name: "{{ package_name }}"
+        state: latest
+        update_cache: yes
+    - name: make sure that Apache is installed on the remote webservers and able to run php
+      apt:
+        name: libapache2-mod-php
+        state: latest
+        update_cache: yes
+    - name: make sure Apache Service is started & enabled at reboot
+      service:
+        name: "{{ service_name }}"
+        state: started
+        enabled: yes
+    - name: make sure that the index.html file is present in the /var/www/html                                    
+      copy:                                                                                                        {this index.html file should go into the "files" role/folder
+        src: "{{ index_file}}"                                                 copy module automatically reads from the files folder, u dont have to specify full path
+        dest: "{{ document_root }}/{{ index_file }}"
+
+    - name: copy Apache Configurations of the websites and restart apache if needed
+      template:                                                                                                {this template i.e the jinja template should go into the "template" role/folder
+        src: website.conf                                                      template model doesnt need the full path either. it just needs the file name 
+        dest: /etc/apache2/sites-enabled/website.conf
+      notify: Restart Apache
+
+4. "files" folder/role
+-copy the files from the files folder in .ansible i.e home/ansible/.ansible/files to the "files" roles under apache> i.e /home/ansible/.ansible/roles/apache/files
+-in the "files" role/folder... 
+*cp ~/ansible/.ansible/files/index.* .
+
+5.inside the template folder/role
+copy the jinja template from the "website.conf" file 
+-In the the template directory...
+*cp /home/ansible/.ansible/files/website.conf
+
+
+-Here, roles are just being written, layer you add machines which require these roles to perform specific jobs/or tasks
+ THe roles have the same logic as AWS user group permission policies
+-just as create groups and add  permissions to groups & any user added to the group inherits the permissions of the group.
+-same way roles are created , and any machines that require the configs made in the various roles get attached
+to perform their jobs
+
+makes configurations easy and neat to build upon
+
+
+
+
+
+SET UP MODULE -(GATHERING FACTS)
+
+1.-Ansible automatically runs some tasks anytime you type the playbook command...
+"TASK [Gathering Facts] *********************************************************"
+ok: [172.31.24.251]
+ok: [172.31.21.230]
+ok: [172.31.23.211]
+
+-The task connects to the remote machines to gather some information from the remote machine such as...
+-what the remote machine is
+-how much CPU remote machine has
+-how much memory
+-how much CPU is in use 
+-how much CPU is free
+-disk space 
+-operating system running           eg Debian or Redhat
+
+==> The name for the module to perform this kind of task is called the SETUP MODULE  (google ansible setup module)
+
+eg performing a one time job using the "ansible adhoc" command will display all the information needed about the remote machine connected to
+*ansible 172.31.85.16 --user ubuntu --become-user root --become-method sudo -b -m apt -a "state=latest update_cache=yes name=apache2"
+
+-eventho "gathering facts" is done by default, you can specify in the playbook not to perfrom that action
+-in the play book...
+ 
+gather_facts: no
+
+
+2. USING THE FACTS TO DETECT VARIOUS OPERATING SYSTEM
+ SCENARIO-
+
+Using  an ansible server to manage remote machines with different OS (Debian & RedHat)
+NB Different packages are used for different operating systems
+
+eg Debian/ubuntu apt = apache2
+   RedHat apt = httpd
+NB: Ubuntu user for Debian/Ubuntu OS
+    ec2-user for RedHat OS
+
+Identify the different operating systems and create specific tasks for them
+
+Say, You have an environment where you have an ansible server managing 2 Debian/ubuntu machines and you want to spin up a RedHat machine in addition.
+
+STEPS
+
+1. Launch an instance with the "RedHat" ami
+-Remember to lauch the machine with the same ssh key "ssh ansible" you used to connect to your Debian machines
+-Also remember the user name is "ec-2 user" for RedHat not Ubuntu
+
+2.GO INTO THE ANSIBLE SERVER & EDIT THE HOSTS FILE
+-edit the hosts file by including the ip address of the newly launched RedHat machine
+-specify the ip address and introduce the argument  "ansible_user=ec2-user" by it       e.g{172.31.88.94  ansible_user=ec2-user} google ansible ssh user for exact argument
+
+3. CREATE SOME ROLES/FOLDERS FOR THE NEWLY CREATED RedHat machine.
+to do this
+-go to roles /home/ansible/.ansible/roles/apache/tasks  where u have your main.yaml file which is only specific to your Debian/ubuntu machine  
+i. create a RedHat.yaml file    
+*touch RedHat.yaml
+
+ii. Rename "main.yaml" file to Debian.yaml 
+*mv main.yaml Debian.yaml
+
+iii. create task to be applied for the "RedHat" machine by editing the "RedHat.yaml" file you created(which is empty at this point)
+*nano RedHat.yaml
+- name: make sure apache is installed                            {google ansible module to install a package on RedHat}
+  yum:                                                            {package name for RedHat is "yum" 
+    name: httpd                                                    {package name is "httpd" for RedHat OS
+    update_cache: yes
+    state: latest
+
+- name: make sure that apache is running
+  service:
+    name: httpd
+    enabled: yes
+    state: started
+
+
+
+==> so anytime a Redhat OS machine is running, the "RedHat.yaml" config file will be run by the ansible server 
+==> but if the machine is running on a Debian OS, the "Debian.yaml" config file will be run
+
+
+NB:AT THIS POINT THERE'S NO "main.yaml" file since the previous one was renamed to "Debian.yaml"{you must create a new main.yaml file)
+NB: BY DEFAULT ANSIBLE SERVER DOES NOT EXECUTE ANY OF THE FILES i.e "Debian.yaml" and "RedHat.yaml"
+THEREFORE, 
+-you must create a "main.yaml" file         {remember, ansible by default executes the "main.yaml" files
+
+iii. create a new "main.yaml" file to select any one of these files i.e "RedHat.yaml" & "Debian.yaml" files based on their OS"
+*touch main.yaml
+-inside the main.yaml file introduce these variables
+*nano main.yaml   
+- include_tasks: "{{ ansible_os_family }}.yaml"          {{ ansible_os_family }} gathers facts anytime you run the playbook command i.e the "main.yaml" file.. if its Debian it will pick the "Debian.yaml" file if its RedHat it will pick the RedHat.yaml file.
+
+
+CREATING VAR FILES FOR DIFFERENT OS 
+-go into the vars roles/folder
+-create a "Debian.yaml" "RedHat.yaml" & specify their corresponding variables
+
+FOR "Debian"(set variables as ...  )
+
+package_name: apache 2
+service_name: apache
+
+for "RedHat.yaml"9set variables... )
+package_name: httpd
+service_name: httpd
+
+THEN MOVE INTO THE TASK FOLDER
+-edit 
+-In the Redhat.yaml folder(instead of hardcoding httpd specify the variables u created instead. 
+-httpd becomes "{{ package_name }}""
+-service becomes "{{ service_ name }}"
+
+in the "task" folder edit ...
+* - include_vars: "{{ ansible_os_family }}.yaml"  into the "main.yaml" file
+
+
+ANSIBLE GALAXY-AN online ansible roles gallery where you can pick from a collection of "already made" roles. eg apache, php etc
+
+-to download a role from ansible galaxy,
+-go into the ".ansible folder" and type this command...
+*ansible-galaxy install "geerlingguy.apache"        {roles name=apache, geerlingguy =owner of the role

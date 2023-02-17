@@ -1,0 +1,91 @@
+Introduction to Build Management 
+
+Say you have a simple web application with a front end server and 2 backend servers
+
+eg   
+
+
+COIT-FRONTEND                         COIT-BACKEND 1                              COIT-BACKEND 2
+  JAVASCRIPT                               JAVA                                       PYTHON
+      |                                      |                                          |
+      |                                      |                                          |
+     NPM                                    MAVEN                                      PIP
+      |                                      |                                          | 
+      |                                      |                                          |
+      V                                      V                                          V
+package.json(default file)               pom.xml
+
+
+
+
+
+
+
+1.When creating the executable file for JAVASCRIPT
+-go into the folder that contains your application code i.e "package.json" file
+
+i. Install NPM
+*apt-get update
+*apt-get install npm
+*npm install                      (downloads all the dependencies and transitive dependencies)
+*npm run build                      (builds an exe file ...compile dependencies, source code,images, stylesheets,html to create a working website that the browser will understand)
+
+NB; Default file for NPM is package.json 
+
+
+
+BUILDING BACKEND SERVICE 1 USING JAVA
+
+move into folder containing your backend service files
+*apt-get update
+*apt-get install maven
+*mvn install                   (build project, compile source code,download dependecies & create a jar file)
+-new folder called "target" will be created containing the jar file.ie "pom.xml"
+
+NB: TO RUN THE JAR FILE, JAVA MUST BE INSTALLED ON THE PC FIRST.
+
+
+PYTHON PIP {used for installing python modules)
+PIP3 is used to read the list of dependencies in the "requirements.txt" and download them
+ 
+FIRST INSTALL PIP3
+*apt-get update
+*apt-get install python3-pip
+*pip3 install -r requirements.txt
+
+
+
+RUN ALL THE SOFTWARES AFTER BUILDING THE EXECUTABLE FILES
+
+#PYTHON SHOULD BE INSTALLED BEFORE YOU CAN RUN PYTHON FILES
+#JAVA SHOULD BE INSTALLED IF YOU WANT TO RUN JAR FILES 
+
+We'll begin with python pip3 {ie backend service 2}
+
+  RUNNING THE BACKEND SERVICE-2
+1.You should have python installed
+2. go into folder container python program(i.e backend -2 service)
+3. go into the sa folder    {cd sa}
+4.run this command... python3 <programname.py
+*python3 sentiment_analysis.py
+
+
+ RUNNING THE JAR FILE (BACKEND SERVICE-1)
+1.Install JAVA first if you dont have it already installed
+2.Move into folder containing the "backend-1 service"
+3.Move into the "target" folder which contains the "jar file"
+4. Run java -jar <nameofjarfile.jar>
+*java -jar sentiment-analysis-web-0.0.1-SNAPSHOT.jar 
+
+
+
+
+RUNNING THE FRONTEND SERVICE (JAVASCRIPT)
+
+1.Go into directory containing your frontend service(frontend service)
+2.install apache 2
+*apt-get update
+*apt-get install apache2
+-locate default apache folder /var/www//html and delete index.html file (rm index.html)
+-copy frontend app file to /var/www/html    to display contents of your frontend service
+                                                                  

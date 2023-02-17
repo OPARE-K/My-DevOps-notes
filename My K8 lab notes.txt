@@ -1,0 +1,191 @@
+1. Create a Managed Kubernetes Cluster in Google
+Utilize GUI- (Easiest way) -thanks Google :-)
+
+create  node pools as well(set of machines with similar X'tics  grouped together.
+
+After creating cluster, next thing to do is connect to cluster using KUBECTL(but hold on..)
+
+# NB Google cloud provides a "basic" UI from which you can create your CONTAINERS,SERVICES,APPLICATIONS ETC{workload tab
+
+OBJECTIVES 
+- deploy 2 wordpress containers to the cluster
+-deploy 1 mySQL  database container to the cluster
+
+2. DEPLOYING A MySQL DATABASE TO THE CLUSTER
+-Create a database container & database service after that(both can be done in GCP UI)
+-FETCH mySQL image from hub.docker.com ->tags -> select tag eg. latest
+-Set your environment variables for mySQL image...
+
+MYSQL_ROOT_PASSWORD-DEVOPS1
+MYSQL_DATABASE-wpdb
+MYSQL_USER-wpuser
+MYSQL_PASSWORD-DEVOPS123
+* Set applicaton name as mysql
+DEPLOY!
+
+3. CREATE mySQL DATABASE SERVICE{ recieves incoming traffic from web app container & passes to database)
+-Expose service
+-database service name= "database-service"   *ALT 1*
+-Port 1/service port=  port mysql listens on i.e 3306, apache or web server listens on port 80
+-target port/container port=port service forwards traffic to i.e 3306
+-expose service
+-service-type=cluster ip
+
+4.WORDPRESS SETUP IN GCP
+*Follow steps used in deploying mySQL dtabse to the cluster
+-Fetch wordpress image from hub.docker.com
+-Set your environment variables for wordpress image
+
+*These variables are just to tell the wordpress container how to communicate with the database container
+WORDPRESS_DB_HOST-database-service  REF *ALT 1*  i.e ip add of database(but in K8s ucan use service name instead
+WORDPRESS_DB_USER-wpuser
+WORDPRESS_DB_PASSWORD-DEVOPS123
+WORDPRESS_DB_NAME-wpdb
+*set application name as wordpress
+DEPLOY!
+
+NB ONCE YOU CREATE A SERVICE EG LOAD BALANCER YOUR CLOUD PROVIDER AUTOMATICALLY ASSIGNS A PUBLIC IP ADDRESSS TO IT
+
+5. CREATE WORDPRESS SERVICE{ recieves incoming traffic from the public & forwards to wordpress container}
+-Expose service
+-wordpress service name=web-service
+-port = 80(service listens on port 80
+-target port= port 80. Apache listens on port 80
+-service-type=Load balancer
+ 
+6.SET UP MACHINE(local laptop, EC2,VM ... TO BE USED TO CONNECT TO CLUSTER
+-in my case i'm using Amazon EC2(ubuntu ami)
+i. Launch instance (ubuntu ami)
+ii.Install gcloud on instance{google}
+
+1. echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list(add repo)
+2.sudo apt-get install apt-transport-https ca-certificates gnupg (install neccesary softwares)
+3.curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+4.sudo apt-get update && sudo apt-get install google-cloud-cli
+#After installing gcloud, aunthenticate with your google account using... gcloud init command
+5. Authenticate machine with your Google cloud account
+
+
+7. CONNECTING TO GCP KUBERNETES CLUSTER USING KUBECTL
+-generate kubeconfig file entry.
+* gcloud container clusters get-credentials <clustername>                 {for google cloud}
+*aws eks --region region update-kubeconfig --name cluster_name             {for AWS}
+
+
+-Install kubectl
+i-     curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+ii-    sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+
+8.MANAGING GKE CLUSTER WITH KUBECTL
+*kubectl get deployment deploymentname -o yaml     (prints out specified deployment name yaml file)
+*kubectl get services servicename -o yaml          (prints out specified service name yaml file)
+
+-create a folder and store (copied) yaml files in them.
+
+NB- Always use config-maps to manage your configurations eg (env variables) instead of hard coding the values in your yaml files
+-{keep all configurations in a central place and set your deployments to Reference them}
+-this makes configurations easier to manage
+-prevents errors
+#imaging managing several micro services  eg 50...and you attempt to hardcode all configurations. there's a high probability that there'll be errors
+
+-SPECIFY DATABASE HOST NAME IN WORDPRESS CONFIG-MAP YAML FILE.
+#Remember to edit image from a previously copied yaml file
+
+how to check logs of container serving webpage
+*kubectl logs -f <podname>
+
+To show label on pods
+*kubectl get pods --show-labels
+
+
+9.CREATING A PERSISTENT VOLUME(PV) USING A PERSISTENT VOLUME CLAIM(PVC)
+i. first create your storage class     {kubectl get sc <storageclassname> -o yaml} select ssd(fast)/pd-standard(slow)
+            CREATE PVC yaml file...(search google on google for persistent volume claim syntax/stack overflow)
+ii.
+kind: PersistentVolumeClaim
+   apiVersion: v1
+   metadata:
+     name: ssd-storage                       {input name of pvc...i.e ssd-storage/name of choice}
+   spec:
+     accessModes:
+       - ReadWriteOnce
+     resources:
+       requests:
+         storage: 5Gi
+     storageClassName:fast-storage                {Refer name you used to create storage class}  
+
+==> use 'kubectl apply -f <pvc.yaml file> to apply the pvc config
+This command automatically creates a persistent Volume(PV) if one hasnt been created already
+
+
+10. CREATING A PERSISTENT VOLUME FOR MySQL
+#Input pvc claim values in database(mysql) deployment file {...so that pods are creeated with a persistent volume}
+#kubernetes documentation... {volumes as claims}
+
+eg.  volumes:
+     - name: mysql-data                   {input name of volume...i.e mysql-data/name of choice}
+       persistentVolumeClaim:
+         claimName: ssd-storage           {refer to claimname you used earlier...i.e ssd-storage} 
+
+###position=ABOVE CONTAINERS###
+
+
+#After creating volume you must mount the volume to a folder{i.e you must mount "mysql-data" to folder in the database container i.e "var/lib/mysql"
+==> mounting volume to folder
+
+volumeMounts:
+- mountPath: /var/lib/mysql
+  name: mysql-data                      {name of volume created earlier i.e mysql-data
+  subPath: mysql                       {creates an empty folder to avoid errors}
+
+go ahead and deploy
+creates a container/ pod with a persistent volume. 
+
+
+
+11. USING ELASTIC CONTAINER REGISTRY{ECR}
+1.  First create repository in the console{ ECR SERVICE}
+2.  Install docker on machine {google install docker on ubuntu}
+3.  Authenticate with the ECR you created
+* docker images - to check if there are images in the repo
+* docker pull wordpress      {pulls wordpress image from docker hub}
+==> aftet pulling you must TAG image before pushing into ECR
+4. TAG THE IMAGE i.e 'wordpress'
+5. docker push <....>      {pushes image into ECR}
+      
+
+
+
+
+when using configmaps,
+1. always apply config map first
+2. edit deployment file and input configmap details in it
+3. apply deployment file
+
+
+
+100 days of kubernetes    = https://www.notion.so/Day-2-More-on-the-Kubernetes-Architecture-5af4f86aa5a843e7bea478a3b1e32392
+
+
+
+
+
+INGRESS  RESOURCE
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello (1)                                          INGRESS NAME
+spec: 
+  rules:
+    - host: hello.example.com (2)                          (host name used by external users to access your application)
+      http:
+        paths:
+          - path: / (3)                 -           
+            pathType: Prefix (4)        -   A path value of / with the pathType value of Prefix is the equivalent of a wildcard that matches any path
+            backend:
+              service:
+                name: hello (5)
+                port:
+                  number: 8080 (6)

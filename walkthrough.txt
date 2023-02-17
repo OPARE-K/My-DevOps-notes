@@ -1,0 +1,139 @@
+HOW TO SSH INTO EC2 INSTANCE (WINDOWS)                                                                          COPYING FILES FROM LOCAL COMPUTER TO EC2
+ssh -i (path to file) (file name) ec2-user@public ip off instance                                                1. Create sec group & key pair		
+
+eg ssh -i C:\users\kojo\Downloads\SSH.pem ec2-user@3.82.116.253                                 1.  After installing apache,  
+
+                                                                                                2.  go into html folder     i.e  /var/wwww/htm 
+                                                                                                3.  change permission to allow you to write files  into html folder i.e chown ec2-user . 
+HOSTING WEBSITE ON EC2 INSTANCE                                                                 4. open windows command prompt - copy path of location of web files eg  Desktop\webfile
+                                                                                                5. cd Desktop\webfile  
+1. Upload web files to S3                                                                       
+2. Create a role for ec2 to access s3                                                                     SCP COMMNAND
+3. Create a security group                                                                  scp -i ./key-pair.pem -r ./pathtofiles/ username@public-ip:/pathwayyouneedtocopyto
+4. Create key pairs                                                                         scp -i ./palanga.pem -r ./Velocity/* ec2-user@54.161.227.211:/var/www/html
+5. Launch instance{ with role, sec grp & key pair created}                                  same command minus (-r) -is used to copy a single file not a folder
+6.SSH into instance                                                                          *scp -i palanga.pem palanga.pem ec2-user@52.32.217.255:/home/ec2-user/palanga.pem
+ 
+commands to use when in instance                                                               
+install apache 
+chkconfig httpd on                                                                                    CONNECTING TO A SERVER IN A PRIVATE SUBNET (eg database server)
+
+after installing apache...                                                                       1. First copy key pair(eg palanga.pem) to server in your (public subnet)i.e webserver
+GO into folder where web files will be copied to i.e     /var/www/html                                USE scp command
+                                                                                                    *scp -i palanga.pem palanga.pem ec2-user@52.32.217.255:/home/ec2-user/palanga.pem
+                                                                                                 2. ssh into webserver 
+#copy files from s3 bucket into html folder                                                            ls -l   to check permission of file
+
+                                                                                                3. Run sudo chmod 600 /pathtofileonremoteserver/keypair.pem
+aws s3 sync://bucketname /var/www/html                                                                 *sudo chmod 600 /home/ec2-user/palanga.pem
+                                                                                                  
+                                                                                               4. ssh into server in private subnet(i.e) database server using (PRIVATE IP) of database server
+
+#START SERVICE
+service httpd start                                                                                 CREATING KEYPAIRS ON FOR SSH ACCESS INTO PRIVATE INSTANCES 
+                                                                                                    1.Login into instance in the public subnet
+                                                                                                    2.Use "keygen" command to create keypairs
+                                                                                                      *ssh-keygen   {all servers as location} command creates a private key & a publickey
+HOSTING WORDPRESS ON UBUNTU SERVER                                                                  3.copy public key 4rm public instance{eg allservers.pem.pub} to the specific location /home/ubuntu/.ssh/authorized_keys 
+1. login into  ubuntu server                                                                       in the instance in private subnet.{ls -a , cd .ssh , nano authorized_keys ,paste your public key}   
+2. *sudo su - root                                                                                  4. cd into location u have your pem file
+3. get wordpress download link.  (i.e ) tar file ...    {https://wordpress.org/latest.tar.gz}       5. *ssh -i allservers.pem ubuntu@privateip 
+4. download file using wget                                                                          
+*wget https://wordpress.org/latest.tar.gz
+5. unzip file/ extract file                                                                                        TO AUTOMATE PUBLIC KEY PAIR GENERATION
+* tar -xzvf file name                                                                                  1.Copy contents of public key{eg allservers.pem.pub}
+* tar -xzvf latest.tar.gz                                                                              2. In aws console go to key pairs, import key and save.
+                                                                                                       3.any instance started can be able to use keys for ssh access
+
+
+
+HOSTING DATABASE SERVER(mys sql) on ubuntu server
+1. login into ubuntu server
+2. *sudo su - root 
+
+3. update & install packages
+  *apt-get update
+  *apt-get install mysql-server
+4.#start mysql-service
+  *service mysql start                      starts the sql server    
+5.*my sql                                   enters into mysql database
+
+#CREATING DATABASES
+1.*create database wordpress;                {creates database named wordpress}
+
+
+#CREATING USERS AND PASSWORDS FOR ENTRY INTO wordpress DATABASE
+ *create user 'wordpressuser'@'localhost' identified by 'DEVOPS123';
+
+
+#TO ASSOCIATE USER & PASSWORD CREATED TO DATABASE
+ *grant all on wordpress.* to 'wordpressuser'@'localhost';
+
+
+#HOW WORDPRESS CONNECTS TO THE DATABASE
+1. Go into wordpress directory          
+2. locate & rename  wp-config-sample.php file
+*mv wp-config-sample.php wp-config-php
+3. Edit *wp-config-php* file contents
+ *nano wp-config-php                  {input databse name, username and passwords at their respective slots}
+
+
+#TO BE ABLE TO RUN WORDPRESS YOU'LL NEED A WEBSERVER EG. APACHE , NGINX ETC
+1.In this case apache will be installed
+*apt-get-update 
+*apt-get install apache2
+*service apache2 start                              /var/www/html
+
+NB* Apache is used to run static files
+    wordpress contains dynamic files {php files}
+
+2.MOVE ALL WORDPRESS FILES TO /var/www/html TO BE SERVED BY APACHE
+*mv wordpress/* /var/www/html
+
+3.Remove apache index.html    
+  *rm index.html
+
+4. *Index.php* cant run on apache therefore some php modules must be installed on apache first
+ first install php module package on ubuntu server
+*apt-get install libapache2-mod-php
+*service apache2 restart
+
+cant run php program yet
+you have to install sql extensions on top of php to be able to run php    (remember wordpress is linked to your database)
+
+#to install sql for ubuntu package
+*apt-get install php-mysql
+*service apache2 restart
+
+TO INSTALL ALL PACKAGES USING ONE COMMAND
+*sudo su -root
+*apt-get update && apt-get install -y apache2 php-mysql libapache2-mod-php mysql-server 
+
+
+
+HOW TO CHECK WHICH INSTANCE IS SERVING TRAFFIC AT A PARTICULAR TIME WHEN LOAD BALANCING
+*cd /var/log/apache2/
+*ls -ltr
+*tail -f access.log
+
+
+EBS VOLUMES 
+1. CREATING VOLUMES 
+   Always ensure that volumes created reside in the same AZ as instance to be attached to
+
+
+2.ATTACHING & MOUNTING THE VOLUME ON THE MACHINE
+ Aftter attaching the created volume to the machine
+
+#login into the machine 
+*sudo su - root
+*fdisk -l         {displays all disks attached to the instance,...Your created drive will be diplayed eg /dev/xvdf}
+
+# mkfs.ext4 'nameofdevice'
+*mkfs.ext4 /dev/xvdf            {installs file system in the drive}
+*mkdir /data         {creates folder for the device to be mounted}
+*mount /dev/xvdf /data
+*df -h       {displays all the disks plus their mount points}    
+#you can move into folder now "cd /data" ... and begin saving files 
+
+NB ALways to try to store data in a secondary disk eg MYSQL, database files  

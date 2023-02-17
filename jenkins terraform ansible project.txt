@@ -1,0 +1,44 @@
+COMBINING JENKINS, TERRAFORM AND ANSIBLE FOR A FULLY AUTOMATED AWS INFRASTRUCTURE.
+
+JENKINS -Used to perform repeated tasks/jobs .eg issuing "ansible playbook commnad" , "terraform apply" etc
+
+jenkins creates a pipeline where repeated tasks are performed one after the other.
+eg 
+i. provision machines in aws
+ii.configure those machines
+iii.secure the machines
+iv. enabling monitoring for all the news
+(one single pipeline can be configured to perform all these tasks one after the other)
+
+
+1. JENKINS INSTALLATION
+-to install JENKINS, u have to install JAVA (jdk 11)
+- jdk 11 ubuntu package (google)
+*apt-get update
+*apt-get install openjdk-11-jdk
+
+2.JENKINS INSTALL UBUNTU (google for steps)
+
+curl -fsSL https://pkg.jenkins.io/debian/jenkins.io.key | sudo tee \
+  /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+
+echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
+  https://pkg.jenkins.io/debian binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
+
+sudo apt-get update
+sudo apt-get install jenkins
+
+
+COMBINING JENKINS AND TERRAFORM TO BUILD AN INFRASTRUCTURE
+-AWS ACCESS CREDENTIALS FOR JENKINS
+-create user called "jenkins"
+
+access key-AKIAZQOAXTZXXMMXOEX2
+secret access key-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
+
+INSTALL AWS-CLI
+*apt-get install awscli
+
+SWITCH FROM "ROOT" USER TO "JENKINS" USER    
+*sudo su jenkins

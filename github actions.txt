@@ -1,0 +1,31 @@
+1. to copy files/code from a github repo to your repo use fork
+
+after forking
+
+2. create a folder and go inti folder in your local machine eg mkdir micro-service cd micro-services
+
+3. clone remote repo to your local repo
+
+ *git clone https://github.com/OPARE-K/coit-simple-microservice.git
+
+
+
+this process a github repo into your personal githu repo
+
+also stores the files locally
+
+
+
+to copy/pull files from your github repo to ec2 instance
+
+1. generate keys i.e private and public keys
+2. store the public key in github account to enable login from ec2
+
+
+after enter this command to authenticate
+*ssh git@github.com                         (command should be entered from directory u have the private keys stored i.e ".ssh"
+
+clone git repo/ remote repo to ec2 instance
+*git clone https://github.com/OPARE-K/coit-simple-microservice.git
+
+

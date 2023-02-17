@@ -1,0 +1,202 @@
+IAC- Infrastructure as code(IAC) is the process of managing and provisioning computer data centres through machine-readable definition files, rather than physical hardware configuration or interactive configuration tools.
+
+
+*terraform init - downloads providers and installs modules.
+
+TERRAFORM - Terraform is a tool for building,changing and versioning infrastructure safely and efficiently.  
+
+access key-AKIAZQOAXTZX6JLQPAO6
+secret access key-lcNSFKgwCpQ+8xNyjOPTvZa3Y4tdQwJ5BKijEb2N
+
+
+1.create a folder to store your terrafrom files
+eg i. "terraform project folder"
+   ii. within that folder create another folder . e.g ecommerce-project
+
+2. inside the ecommerce folder, start creating your ".tf" files
+
+-create provider.tf file  {indicates which provider to be used AWS,GCP or Azure
+-create vpc.tf file
+
+
+vpc cidr block=10.0.0.0/16
+
+TERRAFORM STATE FILE- Its how terraform keeps track of the changes made in the infrastructure.
+
+terraform egress "-1" means all traffic
+
+3.TERRAFORM INIT - creates a .terraform directory / providers directory
+
+
+4.TERRAFORM REMOTE BACKEND- Stores terraform state and may be used to run operations in Terraform Cloud.
+(the state is stored remotely instead of locally)
+
+
+
+CLOUDWATCH
+-Collect   (metrics & logs on services runnning on AWS
+-Monitor   (visualize apps and infrstructures with CW dashboards
+-Act       (automate response to operational changes
+-Analyze   (real time analysis
+
+
+
+TERRAFORM IN ACTION- scott winkler
+
+switch to windows directory on wsl = budden@MSI:/mnt/c/Users/kojo/Desktop/
+
+
+commands to sync system clock on WSL
+
+*ntpdate us.pool.ntp.org
+*rdate -s rdate.cpanel.net
+*ntpclient -s -h pool.ntp.org
+
+
+
+
+
+Input for VARIABLES 
+D -default value
+D -description
+T -type (data type ie. string, boolean number etc
+V -validity
+
+
+
+MODULES - A module in Terraform is a logical, reusable grouping of resources. 
+2types 
+
+1 root module
+2 child module
+
+Standard structure for models
+
+NB There should be a minimum of 3 configuration files per MODULE  ( MOV )
+
+1. -main.tf            (primary entry point
+2. -output.tf          (declarations for all output values)
+3. -variables.tf       (declarations for all input variables
+
+
+
+ROOT MODULE ( Consists of 6 files)
+1  variables.tf               (input variables)
+2  terraform.tfvars           (variables definition file)
+3  providers.tf               (provider declarations)
+4  main.tf                    (entry point for terraform)
+5  outputs.tf                 (output values)
+6  versions.tf                (provider version locking)
+
+NB Root model is the directory where we run terraform plan & terraform apply
+
+
+WHEN WRITING TERRAFORM CODE...
+1. Group related resources
+2. Sort each group by size
+3. Organize the groups so the overall trend is increasing size.
+
+
+
+NB:  The shim module is a mechanism for downloading the build artifact onto your local machine.
+
+
+-STRANGLER FACADE PATTERN - Used to migrate legacy code to terrafrom. (eg ARM TEMPLATES TO TERRAFORM OR CLOUDFORMATION CODE TO TERRAFORM)
+
+-RACE CONDITION - when two people are trying to access the same state file at the same time.
+STATE LOCKS prevents this from happening
+
+
+FLAT AND NESTED MODULES
+ 
+FLAT - Flat modules are most effective in small-to-medium sized codebases and only when your code can be subdivided into components that are functionally independent of each other.(i.e dont have dependencies on resources declared in other files.
+     -They organize your codebase as little.tf files within a single monolithic module.
+
+NESTED - nested module structures tend to be more useful for larger, more complex, and shared codebases
+
+Terrafrom state files are stored locally.
+To collaborate with others on a project, Terraform state file must be stored remotely
+
+
+DISTINCT COMPONENTS REQUIRED TO CREATE AN S3 BACKEND
+1. DYNAMO DB TABLE -   Lock remote state
+2. S3 BUCKET WITH KMS - State storage with encryption at rest
+3. IAM roles - Give access to authorized accounts and persons to perform deployments against the S3 Backend
+4. Miscellaneous housekeeping resources
+
+ 
+
+
+SHARING MODULE
+- Either use github or terraform registry.
+
+NB You’ll need to upload your code to GitHub even if you wish to use the Terraform Registry because the Terraform Registry sources from public GitHub repos.
+
+
+
+MODULE EXPANSION - Terraform feature allowing the use of "count" and  "for_each" on modules.
+
+TERRAFORM TAINT- Target the destruction and recreation of individual resources.
+
+
+TERRAFORM STATE MIGRATION
+
+1. Manually editing state file (not recommended)
+2. Moving stateful data  <terraform state mv>
+3. Deleting old resources with <terraform state rm> and reimporting with <terraform import>.
+
+NB - Resource imports are how unmanaged resources are converted to into managed resources.
+eg (if you created resources out of band, such as through the CLI or using another IaC tool like CloudFormation, you could import them into Terraform as managed resources)
+
+
+STATIC ANALYSIS - which basically makes sure configuration code is valid and has no obvious errors
+TERRAFORM EXEC - Executes terraform commands programmatically
+
+
+
+SECURITY AND SECRET MANAGEMENT
+
+METHODS OF SECURING STATE FILES
+ (3 methods of securing state files)
+
+
+1. REMOVING UNECESSARY SECRETS (ROD)
+ - only 3 blocks can store sensitive information
+i- Resources
+ii- Data sources
+iii- Output values
+
+
+2. LEAST -PRIVILEGED ACCESS CONTROL
+securing state files by using policies to grant access to authorized users
+
+3. ENCRYPTION AT REST
+ensuring data at rest is encrypted - authorized persons can only decrypt data
+
+*terraform cloud & terraform enterprise does that for you by default
+
+
+TRACE LOG ENABLED -  Every API call that Terraform makes to AWS will appear in the trace logs along with the complete request and response objects
+
+NB - best practice is to disable trace logs and only enable when debugging
+
+
+
+SECURING LOGS
+Always turn of trace logging unless when debugging.
+*Secrets are sometimes leaked through logs and therefore trace logging should not be enabled.
+
+
+MANAGING STATIC SECRETS
+Static secrets are secret values that do not change or do not change often.  eg username, passwords
+
+Dynamic secrets-- created just in time and revoked immediately after use.
+
+
+SECRET MANAGEMENT  (they allow to store, access and distribute secrets by authenticating clients against various identity providers
+1. Harshicorp vault   (more complicated with a lot more features)
+2. Amazon secret manager
+
+
+
+

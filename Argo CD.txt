@@ -1,0 +1,107 @@
+Argo  CD is not a continuous integration tool.(jenkins is a CI tool.(builds,test, deploy etc)argo cd is a deployment tool. 
+-so after jenkins does all it continuous integration job, it can push the final code(i.e manifest files) to git repo 
+-argo picks up the manifest files and deploy
+
+
+
+
+
+
+DEVOPS ENG LAPTOP ---------------------------------------------------------------------------------------------------------------KUBERNETES CLUSTER ("gitops")
+                                                                                                                                     
+kubectl(configured to speak to "gitops" cluster)                                                                                        Argo CD(server)         
+Argo CD ctl                
+
+
+
+NAMESPACE- Logical/virtual isolation of your workload)
+
+1. Install Argo CD in your cluster(GOOGLE)
+* kubectl create namespace argocd
+* kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+
+* kubectl get pods -n <namespace>
+  kubectl get pods -n argocd
+
+2. Install Argo Cli in your laptop
+
+
+EXPOSE ARGOCD SERVICE AS LoadBalancer service
+-To edit a service in your argocd cluster                                         
+*kubectl edit services -n argo argocd-server                                     (argocd-server)=service name
+
+
+##APPLY argocd service yaml files using kubectl
+*kubectl apply -n argocd -f argocd-serv.yaml
+   ..     ..        <namespace> -f <service-name>
+
+
+WAYS TO LOGIN INTO ARGO CD
+-2 WAYS
+i. using the cli
+
+ii. using the (Dashboard)ui                      (ui can be used...remember u exposed a service from a cluster IP to a LoadBalancer service. Meaning a Public IP was provide which can be used to login into ARGO CD)   
+
+
+#LOGIN USING DASHBOARD(UI)
+
+-Default username = admin
+-Password =
+
+to get password, use the "get secrets" command
+- kubectl get secrets -n <namespace> <secret-name>
+* kubectl get secrets -n argocd argocd-initial-admin-secret -o yaml                     (prints out the secret)
+
+NB Password will be in (base 64 format) eg MfLnt2ThsjhgKVQ==  so u have to decode
+
+* echo -n "MfLnt2ThsjhgKVQ==" | base64 --decode && echo                               (prints out decoded password for login)
+
+
+#LOGIN USING CLI
+-argocd login <LoadBalancer-service-IP>
+*argocd login 39.33.20.10
+
+-Default username = admin
+-Password = 
+
+
+NB: MAIN JOB OF ARGOCD IS TO PICK MANIFEST FILES FROM GITHUB AND APPLY IT TO KUBERNETES CLUSTER
+
+ARGOCD COMMANDS
+
+*argocd cluster list                                                             (shows you all the clusters argocd manages)
+  
+-TO ADD CLUSTER TO ARGO CD CLUSTER 
+# kubectl config get-context                                                     (displays your kubenertesc clusters)
+
+*argocd cluster add <cluster-name>                                               (adds cluster to clusters managed by argocd)
+*argocd cluster list                                                             (lists clusters under argocd)
+
+
+gke_striking-lane-349909_us-central1-c_devops
+
+                                             
+
+RUNNING YOUR APPLICATIONS ON ARGOCD SERVER
+
+-By default argocd has full permissions on all applications deployed on argocd server{i.e can creates frontend service,backend service , SERVICES(LoadBalancer)
+
+1. Fetch your manifest files from github repo eg;                  {files to be deployed on argo cd cluster}
+ - Deployment.yaml
+ -service.yaml
+ -ingress.yaml
+ -sa.yaml
+ -role.yaml
+ -secrets.yaml
+
+2.CREATE YOUR APPLICATIONS.eg coit frontend, coit backend 1, coit backend 2
+ steps  
+ *argocd app create --help
+
+
+
+
+
+
+                   
