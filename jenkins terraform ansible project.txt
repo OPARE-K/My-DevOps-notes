@@ -1,6 +1,8 @@
 COMBINING JENKINS, TERRAFORM AND ANSIBLE FOR A FULLY AUTOMATED AWS INFRASTRUCTURE.
 
-JENKINS -Used to perform repeated tasks/jobs .eg issuing "ansible playbook commnad" , "terraform apply" etc
+JENKINS - Jenkins is an open source automation server used for automating the different stages of a software development process. It is primarily used for Continuous Integration (CI), Continuous Delivery (CD), and DevOps
+
+I'll be using Jenkins to perform repeated tasks/jobs .eg issuing "ansible playbook command" , "terraform apply" 
 
 jenkins creates a pipeline where repeated tasks are performed one after the other.
 eg 
